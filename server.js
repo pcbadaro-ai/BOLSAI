@@ -19,11 +19,13 @@ const GROQ_KEY = ENV.GROQ_API_KEY || ENV.GEMINI_API_KEY || "";
 const AI_EVERY = (+ENV.AI_EVERY_MIN || 30) * 60000;
 const AI_CONC = 1;
 
+// --- COLE AQUI (Substitui a forma antiga de carregar o universe) ---
 let universe = {};
 try { universe = require("./lib/universe"); } catch (e) { console.log("Aviso universe:", e.message); }
 
-const BR = Array.isArray(universe.BR) ? universe.BR : [];
+const BR = Array.isArray(universe) ? universe : (universe.BR || universe.acoesBR || universe.BRA || []);
 const termsFor = typeof universe.termsFor === "function" ? universe.termsFor : (n => [n]);
+// -----------------------------------------------------------------
 
 const CRYPTO = [
   ["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["SOL", "Solana"], ["BNB", "BNB"],
