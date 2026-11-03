@@ -4,10 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const { Worker } = require("worker_threads");
 const WebSocket = require("ws");
-const { BR, termsFor } = require("./lib/universe");
-
-// Fallback caso yahooUS não exista no universe
-const yahooUS = s => s;
 
 /* ---------- .env mínimo ---------- */
 try {
@@ -23,50 +19,48 @@ const GROQ_KEY = ENV.GROQ_API_KEY || ENV.GEMINI_API_KEY || "";
 const AI_EVERY = (+ENV.AI_EVERY_MIN || 30) * 60000;
 const AI_CONC = 1;
 
+let universe = {};
+try { universe = require("./lib/universe"); } catch (e) { console.log("Aviso ao carregar universe.js:", e.message); }
+
+const BR = Array.isArray(universe.BR) ? universe.BR : [
+  { sym: "PETR4.SA", name: "Petrobras", y: ["PETR4.SA"], terms: ["Petrobras", "PETR4"] },
+  { sym: "VALE3.SA", name: "Vale", y: ["VALE3.SA"], terms: ["Vale", "VALE3"] },
+  { sym: "ITUB4.SA", name: "Itaú Unibanco", y: ["ITUB4.SA"], terms: ["Itaú", "ITUB4"] }
+];
+const termsFor = typeof universe.termsFor === "function" ? universe.termsFor : (n => [n]);
+
 const CRYPTO = [
   ["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["SOL", "Solana"], ["BNB", "BNB"],
-  ["XRP", "XRP"], ["ADA", "Cardano"], ["AVAX", "Avalanche"], ["DOGE", "Dogecoin"],
-  ["LINK", "Chainlink"], ["DOT", "Polkadot"], ["NEAR", "NEAR Protocol"], ["MATIC", "Polygon"]
+  ["XRP", "XRP"], ["ADA", "Cardano"], ["AVAX", "Avalanche"], ["DOGE", "Dogecoin"]
 ];
 
 const STOCKS = [
   ["AAPL", "Apple"], ["MSFT", "Microsoft"], ["NVDA", "NVIDIA"], ["AMZN", "Amazon"],
-  ["GOOGL", "Alphabet"], ["META", "Meta Platforms"], ["TSLA", "Tesla"], ["BRK-B", "Berkshire Hathaway"],
-  ["JPM", "JPMorgan Chase"], ["V", "Visa"], ["XOM", "ExxonMobil"], ["JNJ", "Johnson & Johnson"],
-  ["WMT", "Walmart"], ["MA", "Mastercard"], ["NFLX", "Netflix"], ["AMD", "AMD"],
-  ["INTC", "Intel"], ["DIS", "Disney"], ["PYPL", "PayPal"], ["COIN", "Coinbase"]
+  ["GOOGL", "Alphabet"], ["META", "Meta Platforms"], ["TSLA", "Tesla"], ["NFLX", "Netflix"]
 ];
 
 const assets = new Map();
 for (const [s, n] of CRYPTO) assets.set(s, { kind:"crypto", mkt:"CRYPTO", ccy:"USD", sym:s, name:n, pair:s + "USDT", H:7, ysyms:[s + "-USD"] });
-for (const [s, n] of STOCKS) assets.set(s, { kind:"stock", mkt:"US", ccy:"USD", sym:s, name:n, H:5, ysyms:[yahooUS(s)], terms:[s, n] });
-for (const b of BR) assets.set(b.sym, { kind:"stock", mkt:"BR", ccy:"BRL", sym:b.sym, name:b.name, H:5, ysyms:b.y, terms:b.terms || termsFor(b.name) });
+for (const [s, n] of STOCKS) assets.set(s, { kind:"stock", mkt:"US", ccy:"USD", sym:s, name:n, H:5, ysyms:[s], terms:[s, n] });
+for (const b of BR) if (b && b.sym) assets.set(b.sym, { kind:"stock", mkt:"BR", ccy:"BRL", sym:b.sym, name:b.name || b.sym, H:5, ysyms:b.y || [b.sym], terms:b.terms || termsFor(b.name || "") });
 
 const clients = new Set();
 const diag = { started: Date.now(), crypto: { ok:false, err:null }, stocks: { okN:0, fails:0, err:null, sym:null }, macro: { selic:null, usdbrl:null } };
 let aiLastError = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/* ---------- Worker de Análise Estatística ---------- */
-const workerPath = path.join(__dirname, "worker.js");
-let worker = null;
-if (fs.existsSync(workerPath)) {
-  worker = new Worker(workerPath);
-}
+/* ---------- Worker de Análise Estatística ---------- *
+const worker = new Worker(path.join(__dirname, "worker.js"));
 const pending = new Map();
 let wid = 0;
-
-if (worker) {
-  worker.on("message", ({ id, result, error }) => {
-    const p = pending.get(id); if (!p) return; pending.delete(id);
-    error ? p.rej(new Error(error)) : p.res(result);
-  });
-  worker.on("error", e => log("worker", e.message));
-}
+worker.on("message", ({ id, result, error }) => {
+  const p = pending.get(id); pending.delete(id);
+  error ? p.rej(new Error(error)) : p.res(result);
+});
+worker.on("error", e => log("worker", e.message));
 
 function runAnalysis(closes, H, price) {
   return new Promise((res, rej) => {
-    if (!worker) return rej(new Error("Worker não encontrado"));
     const id = ++wid; pending.set(id, { res, rej });
     worker.postMessage({ id, closes, H, price });
     setTimeout(() => { if (pending.delete(id)) rej(new Error("análise demorou demais")); }, 300000);
@@ -123,6 +117,7 @@ function parseAI(raw) {
     return { veredito: "neutro", sentimento: 0, resumo: "Falha ao processar resposta da IA.", riscos: [], cenarios: { alta: "", base: "", baixa: "" }, x: "", fontes: [], notas: [e.message] };
   }
 }
+function validateAI(ai, ctx) { return ai; }
 
 const aiQueue = []; let aiActive = 0;
 function queueAI(a, urgent) {
@@ -136,7 +131,7 @@ async function drainAI() {
     try {
       const { text, ctx } = aiPrompt(a);
       const { out, model } = await callGroq(text); ctx.model = model;
-      a.ai = parseAI(out); a.aiAt = Date.now(); aiLastError = null;
+      a.ai = validateAI(parseAI(out), ctx); a.aiAt = Date.now(); aiLastError = null;
       broadcast({ type: "ai", asset: view(a) });
     } catch (e) { a.aiAt = Date.now() - AI_EVERY + 120000; aiLastError = e.message; log("IA", a.sym, e.message); }
     a.aiRunning = false;
@@ -149,6 +144,14 @@ async function aiLoop() {
     for (const a of assets.values()) if (a.analysis && (a.newsAt || Date.now() - diag.started > 6 * 60000) && Date.now() - (a.aiAt || 0) > AI_EVERY) queueAI(a, false);
     await sleep(15000);
   }
+}
+
+function completedSeries(a) {
+  const c = a.candles; if (!c || c.length < 400) return null;
+  const lastT = c.at(-1).t, today0 = Math.floor(Date.now() / 86400000) * 86400000;
+  const closed = lastT < today0 ? c : c.slice(0, -1);
+  const out = closed.map(x => x.c);
+  return out.every(Number.isFinite) ? out : null;
 }
 
 function view(a) {
