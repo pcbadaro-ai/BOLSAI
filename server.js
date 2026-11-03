@@ -19,30 +19,45 @@ const GROQ_KEY = ENV.GROQ_API_KEY || ENV.GEMINI_API_KEY || "";
 const AI_EVERY = (+ENV.AI_EVERY_MIN || 30) * 60000;
 const AI_CONC = 1;
 
-let universe = {};
-try { universe = require("./lib/universe"); } catch (e) { console.log("Aviso ao carregar universe.js:", e.message); }
-
-const BR = Array.isArray(universe.BR) ? universe.BR : [
-  { sym: "PETR4.SA", name: "Petrobras", y: ["PETR4.SA"], terms: ["Petrobras", "PETR4"] },
-  { sym: "VALE3.SA", name: "Vale", y: ["VALE3.SA"], terms: ["Vale", "VALE3"] },
-  { sym: "ITUB4.SA", name: "Itaú Unibanco", y: ["ITUB4.SA"], terms: ["Itaú", "ITUB4"] }
-];
-const termsFor = typeof universe.termsFor === "function" ? universe.termsFor : (n => [n]);
+// Carrega o universo original completo do projeto
+const universe = require("./lib/universe");
+const BR = universe.BR || [];
+const termsFor = universe.termsFor || (n => [n]);
 
 const CRYPTO = [
   ["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["SOL", "Solana"], ["BNB", "BNB"],
-  ["XRP", "XRP"], ["ADA", "Cardano"], ["AVAX", "Avalanche"], ["DOGE", "Dogecoin"]
+  ["XRP", "XRP"], ["ADA", "Cardano"], ["AVAX", "Avalanche"], ["DOGE", "Dogecoin"],
+  ["LINK", "Chainlink"], ["DOT", "Polkadot"], ["NEAR", "NEAR Protocol"], ["MATIC", "Polygon"]
 ];
 
 const STOCKS = [
   ["AAPL", "Apple"], ["MSFT", "Microsoft"], ["NVDA", "NVIDIA"], ["AMZN", "Amazon"],
-  ["GOOGL", "Alphabet"], ["META", "Meta Platforms"], ["TSLA", "Tesla"], ["NFLX", "Netflix"]
+  ["GOOGL", "Alphabet"], ["META", "Meta Platforms"], ["TSLA", "Tesla"], ["BRK-B", "Berkshire Hathaway"],
+  ["JPM", "JPMorgan Chase"], ["V", "Visa"], ["XOM", "ExxonMobil"], ["JNJ", "Johnson & Johnson"],
+  ["WMT", "Walmart"], ["MA", "Mastercard"], ["NFLX", "Netflix"], ["AMD", "AMD"],
+  ["INTC", "Intel"], ["DIS", "Disney"], ["PYPL", "PayPal"], ["COIN", "Coinbase"]
 ];
 
 const assets = new Map();
 for (const [s, n] of CRYPTO) assets.set(s, { kind:"crypto", mkt:"CRYPTO", ccy:"USD", sym:s, name:n, pair:s + "USDT", H:7, ysyms:[s + "-USD"] });
 for (const [s, n] of STOCKS) assets.set(s, { kind:"stock", mkt:"US", ccy:"USD", sym:s, name:n, H:5, ysyms:[s], terms:[s, n] });
-for (const b of BR) if (b && b.sym) assets.set(b.sym, { kind:"stock", mkt:"BR", ccy:"BRL", sym:b.sym, name:b.name || b.sym, H:5, ysyms:b.y || [b.sym], terms:b.terms || termsFor(b.name || "") });
+
+// Carrega todas as ações brasileiras do universe.js original
+for (const b of BR) {
+  if (b && b.sym) {
+    assets.set(b.sym, { 
+      kind: "stock", 
+      mkt: "BR", 
+      ccy: "BRL", 
+      sym: b.sym, 
+      name: b.name || b.sym, 
+      H: 5, 
+      ysyms: b.y || [b.sym], 
+      terms: b.terms || termsFor(b.name || "") 
+    });
+  }
+}
+|| [b.sym], terms:b.terms || termsFor(b.name || "") });
 
 const clients = new Set();
 const diag = { started: Date.now(), crypto: { ok:false, err:null }, stocks: { okN:0, fails:0, err:null, sym:null }, macro: { selic:null, usdbrl:null } };
