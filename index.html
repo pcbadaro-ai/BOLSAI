@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sinal Semanal</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1320; --surface:#151d30; --surface2:#1c2641; --line:#27324d;
+  --fg:#e9e6dc; --muted:#8f99b0; --accent:#ebb54c; --up:#56c4a2; --down:#e66b55;
+  --cone:rgba(235,181,76,.16);
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root{--bg:#eef1f6;--surface:#fff;--surface2:#e6ebf3;--line:#d5dce8;--fg:#141b2c;--muted:#5d6881;--accent:#a8700a;--up:#17825f;--down:#c1412c;--cone:rgba(168,112,10,.14);color-scheme:light}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+h1{font:800 clamp(28px,5vw,40px)/1 var(--display);letter-spacing:-.02em;margin:0}
+.sub{color:var(--muted);margin:6px 0 0;max-width:46ch}
+.status{display:flex;align-items:center;gap:8px;font:500 12px var(--mono);color:var(--muted);flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--up);box-shadow:0 0 0 4px color-mix(in srgb,var(--up) 25%,transparent);animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 7px transparent}}
+@media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.tabs{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs button{border:0;background:none;padding:7px 16px;border-radius:7px;color:var(--muted);font-weight:600}
+.tabs button[aria-selected="true"]{background:var(--surface2);color:var(--fg)}
+.ghost{border:1px solid var(--line);background:none;border-radius:10px;padding:8px 14px;color:var(--muted)}
+.ghost:hover{color:var(--fg);border-color:var(--muted)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.chip{font:600 11px var(--mono);padding:4px 9px;border-radius:99px;background:var(--surface2);color:var(--muted)}
+.chip.on{color:var(--up)}
+.cols{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 14px;width:100%}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface2)}
+.row[aria-pressed="true"]{background:var(--surface2);box-shadow:inset 3px 0 0 var(--accent)}
+.sym{font:700 17px var(--display)}
+.nm{color:var(--muted);font-size:12px;margin-left:6px;font-family:var(--body);font-weight:400}
+.px{font-size:14px}.chg{font-size:12px}
+.up{color:var(--up)}.down{color:var(--down)}.muted{color:var(--muted)}
+.rr{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.pill{font:700 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.pill.buy{background:color-mix(in srgb,var(--up) 20%,transparent);color:var(--up)}
+.pill.avoid{background:color-mix(in srgb,var(--down) 20%,transparent);color:var(--down)}
+.pill.wait,.pill.obs{background:var(--surface2);color:var(--muted)}
+.pill.obs{color:var(--accent)}
+.skel{height:10px;width:70px;border-radius:5px;background:var(--surface2)}
+.flash-up{animation:fu .6s}.flash-down{animation:fd .6s}
+@keyframes fu{from{background:color-mix(in srgb,var(--up) 30%,transparent)}}
+@keyframes fd{from{background:color-mix(in srgb,var(--down) 30%,transparent)}}
+@media (prefers-reduced-motion:reduce){.flash-up,.flash-down{animation:none}}
+.panel{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:18px;min-width:0}
+.panel h2{font:700 26px var(--display);margin:0;letter-spacing:-.01em}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;align-items:baseline}
+.big{font:600 28px var(--mono);font-variant-numeric:tabular-nums}
+.banner{margin:14px 0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface2)}
+.banner b{font:800 18px var(--display)}
+.banner.buy{border-color:var(--up)}.banner.buy b{color:var(--up)}
+.banner.avoid{border-color:var(--down)}.banner.avoid b{color:var(--down)}
+.banner.obs b{color:var(--accent)}
+.banner p{margin:4px 0 0;color:var(--muted)}
+canvas{display:block;width:100%;height:240px;border-radius:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.m{background:var(--surface2);border-radius:10px;padding:10px 12px;min-width:0}
+.m .k{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.m .v{font:600 18px var(--mono);margin-top:2px;overflow-wrap:anywhere}
+.m .s{font-size:12px;color:var(--muted);margin-top:2px}
+h3{font:700 13px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.when p{margin:0 0 8px}
+.hours{display:flex;align-items:flex-end;gap:2px;height:70px;margin:10px 0 2px}
+.hours i{flex:1;min-width:0;border-radius:2px 2px 0 0;background:var(--muted);opacity:.55}
+.hours i.p{background:var(--up);opacity:.9}.hours i.n{background:var(--down);opacity:.9}
+.hours i.hl{outline:2px solid var(--accent);outline-offset:1px;opacity:1}
+.hlab{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--muted)}
+.sim{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sim input{width:130px;background:var(--surface2);border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 10px;font:500 15px var(--mono)}
+.ai{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface2)}
+.ai .top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
+.ai ul{margin:6px 0 0;padding-left:18px;color:var(--muted)}
+.meter{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--down),var(--muted),var(--up));width:120px}
+.meter i{position:absolute;top:-4px;width:3px;height:14px;background:var(--fg);border-radius:2px}
+.news{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.news a{color:var(--fg);text-decoration:none}.news a:hover{text-decoration:underline}
+.news small{color:var(--muted)}
+.tw{margin:0;padding:8px 0 0 12px;border-left:2px solid var(--line);color:var(--muted);font-size:13px}
+details{margin-top:18px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--fg);font-weight:600}
+details p{margin:8px 0}
+.risk{margin-top:22px;padding:12px 14px;border-radius:10px;background:var(--surface2);color:var(--muted);font-size:13px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:5;max-width:min(360px,calc(100vw - 32px))}
+.toast{background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:10px 12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Sinal Semanal</h1>
+      <p class="sub">Padrões do gráfico, notícias, X e IA, atualizados sozinhos no servidor.</p>
+    </div>
+    <div class="status"><span class="dot" id="dot"></span><span id="stat">conectando…</span><span id="ping"></span></div>
+  </header>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-crypto" aria-selected="true">Cripto</button>
+      <button role="tab" id="tab-stocks" aria-selected="false" hidden>Ações</button>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Horizonte da previsão" id="hzbar">
+      <button role="tab" data-hz="1s" aria-selected="true">1 semana</button>
+      <button role="tab" data-hz="1m" aria-selected="false">1 mês</button>
+      <button role="tab" data-hz="5m" aria-selected="false">5 meses</button>
+    </div>
+    <button class="ghost" id="notif">Ativar alertas</button>
+    <div class="chips"><span class="chip" id="c-live">Binance</span><span class="chip" id="c-ai">IA</span><span class="chip" id="c-x">X</span></div>
+  </div>
+  <div class="cols">
+    <div class="list" id="list" aria-label="Ranking de ativos"></div>
+    <section class="panel" id="detail" aria-live="polite"><div class="empty">Conectando ao servidor…</div></section>
+  </div>
+  <div class="risk">Estatística sobre o passado e leitura automática de notícias. Não é promessa de lucro nem recomendação de investimento. O mercado pode agir diferente de qualquer padrão anterior. Não invista o que não pode perder.</div>
+</div>
+<div class="toasts" id="toasts"></div><script>
+"use strict";
+const LABEL = { buy:"Comprar", obs:"Observar", wait:"Aguardar", avoid:"Evitar" };
+const unit = a => a.kind === "stock" ? "pregões" : "dias";
+const ORDER = { buy:0, obs:1, wait:2, avoid:3 };
+const HZN = { "1s":"1 semana", "1m":"1 mês", "5m":"5 meses" };
+const VER = { confirma:"Confirma o sinal", neutro:"Neutro", contradiz:"Contradiz o sinal" };
+const assets = new Map(); let tab = "crypto", selected = null, features = {}, hz = "1s";
+
+const $ = s => document.querySelector(s);
+const nf = (v, a, b) => v.toLocaleString("pt-BR", { minimumFractionDigits:a, maximumFractionDigits:b });
+const usd = v => v >= 1 ? "US$ " + nf(v, 2, 2) : "US$ " + nf(v, 4, 6);
+const pct = (v, d = 1) => (v >= 0 ? "+" : "") + nf(v * 100, d, d) + "%";
+const cls = v => v >= 0 ? "up" : "down";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const ago = t => { const s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 90 ? s + "s" : s < 5400 ? Math.round(s / 60) + " min" : Math.round(s / 3600) + " h"; };
+const fhour = h => String(Math.floor(h)).padStart(2, "0") + "h";
+const DAY = 86400000;
+function addTradingDaysUTC(t, n) { const d = new Date(t); let left = n; while (left > 0) { d.setUTCDate(d.getUTCDate() + 1); if (d.getUTCDay() !== 0 && d.getUTCDay() !== 6) left--; } return d; }
+function exitLabel(a, day) {
+  if (a.kind === "stock") return addTradingDaysUTC(a.baseT, day).toLocaleDateString("pt-BR", { weekday:"short", day:"2-digit", month:"short", timeZone:"UTC" }) + " (fechamento)";
+  return new Date(a.baseT + (day + 1) * DAY).toLocaleString("pt-BR", { weekday:"short", day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+}
+
+/* ---------- Conexão com o servidor com WSS e fallback ---------- */
+let ws, tries = 0, pingT = 0;
+function connect() {
+  const t = new URLSearchParams(location.search).get("t");
+  const wsProtocol = location.protocol === "https:" ? "wss://" : "ws://";
+  ws = new WebSocket(wsProtocol + location.host + "/ws" + (t ? "?t=" + encodeURIComponent(t) : ""));
+  ws.onopen = () => { tries = 0; setStat("conectado", true); clearInterval(pingT); const ping = () => ws.readyState === 1 && ws.send(JSON.stringify({ type:"ping", t:performance.now() })); ping(); pingT = setInterval(ping, 4000); };
+  ws.onmessage = e => handle(JSON.parse(e.data));
+  ws.onclose = () => {
+    setStat("reconectando…", false);
+    clearInterval(pingT);
+    if (tries === 0) {
+      fetch("/health" + (t ? "?t=" + encodeURIComponent(t) : ""))
+        .then(r => r.json())
+        .then(data => { if (data.ok) location.reload(); })
+        .catch(() => {});
+    }
+    setTimeout(connect, Math.min(1000 * 2 ** tries++, 10000));
+  };
+}
+function setStat(t, on) { $("#stat").textContent = t; $("#dot").classList.toggle("on", !!on); }
+function ingest(v) {
+  const a = assets.get(v.sym) || {};
+  Object.assign(a, v);
+  a.candles = (v.candles || []).map(c => ({ t:c[0], o:c[1], h:c[2], l:c[3], c:c[4] }));
+  if (v.hours && v.hours.mean) {
+    const off = Math.round(-new Date().getTimezoneOffset() / 60), mean = new Array(24), t = new Array(24);
+    v.hours.mean.forEach((x, h) => { const l = (h + off + 24) % 24; mean[l] = x; t[l] = v.hours.t[h]; });
+    a.hoursLocal = { mean, t, days:v.hours.days };
+  }
+  assets.set(v.sym, a); return a;
+}
+function handle(m) {
+  if (m.type === "snapshot") {
+    const keep = selected && selected.sym; features = m; assets.clear(); m.assets.forEach(ingest); selected = keep ? assets.get(keep) || null : null;
+    $("#c-live").classList.toggle("on", m.live); $("#c-ai").classList.toggle("on", m.ai); $("#c-x").classList.toggle("on", m.x);
+    $("#c-ai").textContent = m.ai ? "IA ligada" : "IA desligada"; $("#c-x").textContent = m.x ? "X ligado" : "X desligado";
+    $("#tab-stocks").hidden = ![...assets.values()].some(a => a.kind === "stock");
+    if (!selected) pickFirst(); render();
+  } else if (m.type === "tick") {
+    const a = assets.get(m.sym); if (!a) return;
+    const old = a.price; a.price = m.price; a.open24 = m.open24; paintTick(a, old);
+  } else if (m.type === "analysis" || m.type === "ai") {
+    const was = selected && selected.sym === m.asset.sym;
+    const a = ingest(m.asset); if (was) selected = a;
+    renderList(); if (was) renderDetail(a);
+    if (!selected) { pickFirst(); render(); }
+  } else if (m.type === "alert") {
+    toast(m.text); if ("Notification" in window && Notification.permission === "granted") new Notification("Sinal Semanal", { body:m.text });
+  } else if (m.type === "pong") {
+    $("#ping").textContent = "· " + Math.round(performance.now() - m.t) + " ms";
+  } else if (m.type === "status") {
+    $("#c-live").classList.toggle("on", m.live);
+  }
+}
+function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; $("#toasts").appendChild(d); setTimeout(() => d.remove(), 12000); }
+
+const anOf = a => a.analyses && a.analyses[hz];
+const finalOf = a => { const an = anOf(a); return an ? ((a.finals && a.finals[hz]) || an.rec) : null; };
+function renderList() {
+  const kind = tab === "crypto" ? "crypto" : "stock";
+  const list = [...assets.values()].filter(a => a.kind === kind).sort((a, b) => {
+    const x = anOf(a), y = anOf(b);
+    if (!x || !y) return (y ? 1 : 0) - (x ? 1 : 0);
+    return ORDER[finalOf(a)] - ORDER[finalOf(b)] || y.st.med - x.st.med;
+  });
+  if (!list.length) { $("#list").innerHTML = `<div class="empty">${kind === "stock" ? "Ações estão desligadas no servidor (defina TWELVEDATA_KEY)." : "Carregando histórico…"}</div>`; return; }
+  $("#list").innerHTML = list.map(a => {
+    const an = anOf(a), ch = a.price ? a.price / a.open24 - 1 : 0, f = finalOf(a);
+    const right = an ? `<span class="pill ${f}">${LABEL[f]}</span><span class="mono ${cls(an.st.med)}" style="font-size:12px">${pct(an.st.med)} em ${an.H}d</span>` : `<span class="skel"></span>`;
+    return `<button class="row" data-id="${a.sym}" aria-pressed="${selected === a}">
+      <span><span class="sym">${a.sym}</span><span class="nm">${a.name}</span><br><span class="px mono">${a.price ? usd(a.price) : "…"}</span> <span class="chg mono ${cls(ch)}">${a.price ? pct(ch, 2) : ""}</span></span>
+      <span class="rr">${right}</span></button>`;
+  }).join("");
+}
+function paintTick(a, old) {
+  const row = document.querySelector(`[data-id="${a.sym}"]`);
+  if (row) {
+    const px = row.querySelector(".px"), c = row.querySelector(".chg"), ch = a.price / a.open24 - 1;
+    px.textContent = usd(a.price); c.textContent = pct(ch, 2); c.className = "chg mono " + cls(ch);
+    if (old && old !== a.price) { px.classList.remove("flash-up", "flash-down"); void px.offsetWidth; px.classList.add(a.price > old ? "flash-up" : "flash-down"); }
+  }
+  if (selected === a) {
+    const p = $("#bigpx"); if (!p) return; const ch = a.price / a.open24 - 1;
+    p.textContent = usd(a.price); $("#bigchg").textContent = pct(ch, 2) + " 24h"; $("#bigchg").className = "mono " + cls(ch);
+    drawChart(a);
+  }
+}
+
+function reasonText(a) {
+  const { st, rec, conf, bt, H } = anOf(a);
+  const base = `Em ${st.n} momentos passados com gráfico parecido, o preço de agora subiria em ${Math.round(st.pUp * 100)}% dos casos, com mediana de ${pct(st.med)} em ${H} ${unit(a)}.`;
+  if (rec === "buy") return base + ` Nos testes fora da amostra esse tipo de sinal acertou ${Math.round(bt.buyWin * 100)}% das vezes (confiança ${conf}).`;
+  if (rec === "obs") return base + (bt.buyWin == null ? " Esse tipo de sinal quase não apareceu no histórico, então a confiança é baixa." : ` Nos testes passados esse sinal não superou o acaso de forma clara (acerto ${Math.round(bt.buyWin * 100)}% contra ${Math.round(bt.base * 100)}% do mercado).`);
+  if (anOf(a).lowData) return base + " Há poucos casos parecidos no histórico para este horizonte, então não há base para opinar.";
+  if (rec === "avoid") return base + " O histórico parecido pende para queda.";
+  return base + " Não há vantagem clara para nenhum lado.";
+}
+function aiHTML(a) {
+  if (!features.ai) return `<div class="ai muted">A IA está desligada. Defina GEMINI_API_KEY no servidor.</div>`;
+  if (!a.ai) return `<div class="ai muted">A IA ainda está lendo as notícias deste ativo. Isso leva alguns segundos.</div>`;
+  const s = a.ai;
+  return `<div class="ai"><div class="top"><b>${VER[s.veredito]}</b>
+    <span class="meter" title="Sentimento ${s.sentimento.toFixed(2)}"><i style="left:calc(${(s.sentimento + 1) * 50}% - 1px)"></i></span>
+    <span class="muted" style="font-size:12px">atualizada há ${ago(a.aiAt)}</span></div>
+    <p style="margin:0">${esc(s.resumo)}</p>
+    ${s.riscos.length ? `<ul>${s.riscos.map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    <p class="muted" style="margin:10px 0 0;font-size:13px"><b>X:</b> ${esc(s.x || "sem dados do X")}</p></div>`;
+}
+function hoursHTML(a) {
+  if (!a.hoursLocal) return "";
+  const { mean, t, days } = a.hoursLocal, max = Math.max(...mean.map(Math.abs)) || 1;
+  let lo = 0, hi = 0; mean.forEach((v, i) => { if (v < mean[lo]) lo = i; if (v > mean[hi]) hi = i; });
+  const sig = Math.max(Math.abs(t[lo]), Math.abs(t[hi])) >= 3;
+  const bars = mean.map((v, i) => `<i class="${v >= 0 ? "p" : "n"}${sig && (i === lo || i === hi) ? " hl" : ""}" style="height:${Math.max(4, Math.abs(v) / max * 100)}%" title="${fhour(i)}: ${pct(v, 3)} (t=${t[i].toFixed(1)})"></i>`).join("");
+  const txt = sig ? `nos últimos ~${days} dias, ${t[lo] <= -3 ? `a hora ${fhour(lo)} teve retorno médio claramente menor (melhor para comprar)` : ""}${t[lo] <= -3 && t[hi] >= 3 ? " e " : ""}${t[hi] >= 3 ? `a hora ${fhour(hi)} claramente maior (melhor para vender)` : ""}.` : `nos últimos ~${days} dias, nenhuma hora do dia se destaca do ruído.`;
+  return `<div class="when"><p><b>Horário (seu fuso):</b> ${txt}</p><div class="hours" aria-hidden="true">${bars}</div><div class="hlab"><span>0h</span><span>12h</span><span>23h</span></div></div>`;
+}
+function newsHTML(a) {
+  const n = a.news || [], t = a.tweets || [];
+  let h = n.length ? `<ul class="news">${n.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a><br><small>${esc(x.src)} · há ${ago(x.when)}</small></li>`).join("")}</ul>` : `<span class="muted">${a.kind === "stock" ? "Notícias automáticas só para cripto." : "Sem notícias carregadas ainda."}</span>`;
+  if (t.length) h += `<h3>Posts em destaque no X</h3>` + t.slice(0, 4).map(x => `<p class="tw">${esc(x.text)}<br><small>há ${ago(x.when)} · ${x.likes} curtidas</small></p>`).join("");
+  return h + `<p><a href="https://x.com/search?q=%24${encodeURIComponent(a.sym)}&src=typed_query&f=live" target="_blank" rel="noopener">Abrir busca de $${a.sym} no X</a></p>`;
+}
+function renderDetail(a) {
+  const el = $("#detail");
+  const an = anOf(a);
+  if (!an) { el.innerHTML = `<div class="empty">${a.analyses && Object.keys(a.analyses).length ? `Histórico insuficiente de ${a.sym} para o horizonte de ${HZN[hz]}. Tente um horizonte menor.` : `Analisando ${a.sym}…`}</div>`; return; }
+  const st = an.st, bt = an.bt, f = finalOf(a), ch = a.price / a.open24 - 1;
+  const exit = an.exitDay && f !== "avoid" ? exitLabel(a, an.exitDay) : null;
+  let entry = f === "avoid" ? "Sem entrada sugerida." : st.pDip >= 0.5 ? `Em ${Math.round(st.pDip * 100)}% dos casos parecidos o preço recuou mais de 0,5% nos 3 primeiros dias. Ordem limite perto de ${usd(a.price * (1 + st.dip))}.` : "Os casos parecidos quase não recuaram. Entrada a mercado.";
+  if (document.activeElement && document.activeElement.id === "amt") return;
+  const keep = $("#amt") ? $("#amt").value : "1000", openDet = !!(el.querySelector("details") && el.querySelector("details").open);
+  const down = f !== an.rec ? `<p>A IA rebaixou o sinal estatístico de ${LABEL[an.rec]} para ${LABEL[f]}.</p>` : "";
+  $("#detail").innerHTML = `
+    <div class="head"><h2>${a.sym} <span class="nm" style="font-size:14px">${a.name}</span></h2>
+      <div><span class="big" id="bigpx">${usd(a.price)}</span> <span id="bigchg" class="mono ${cls(ch)}">${pct(ch, 2)} 24h</span></div></div>
+    <div class="banner ${f}"><b>${LABEL[f]}</b>${down}<p>${reasonText(a)}</p></div>
+    ${hz !== "1s" && an.conf === "baixa" ? `<p class="muted" style="font-size:13px;margin:0 0 10px">Horizonte de ${HZN[hz]}: o histórico tem poucas janelas independentes desse tamanho, então o acerto não pôde ser comprovado (confiança baixa). Leia como cenário, não como sinal.</p>` : ""}
+    <canvas id="chart" aria-label="Gráfico de ${a.sym} com projeção"></canvas>
+    <div class="grid">
+      <div class="m"><div class="k">Retorno esperado</div><div class="v ${cls(st.med)}">${pct(st.med)}</div><div class="s">mediana em ${an.H} ${unit(a)}</div></div>
+      <div class="m"><div class="k">Faixa provável</div><div class="v">${pct(st.p10, 0)} a ${pct(st.p90, 0)}</div><div class="s">80% dos casos</div></div>
+      <div class="m"><div class="k">Chance de alta</div><div class="v">${Math.round(st.pUp * 100)}%</div><div class="s">em ${st.n} casos</div></div>
+      <div class="m"><div class="k">Acerto do sinal</div><div class="v">${bt.buyWin == null ? "—" : Math.round(bt.buyWin * 100) + "%"}</div><div class="s">${bt.buyWin == null ? "n/d" : `${bt.buyWeeks} testes independentes`}</div></div>
+      <div class="m"><div class="k">Confiança</div><div class="v">${an.conf}</div><div class="s">backtest</div></div>
+      <div class="m"><div class="k">Sair em</div><div class="v" style="font-size:15px">${exit || "sem alvo"}</div><div class="s">${exit ? `dia ${an.exitDay}` : "sem dia positivo"}</div></div>
+    </div>
+    <h3>Leitura da IA</h3>${aiHTML(a)}
+    <h3>Quando entrar e quando sair</h3>
+    <div class="when"><p><b>Entrada:</b> ${entry}</p>
+    <p><b>Retorno:</b> ${exit ? `o ganho mediano chega ao pico em ${exit}.` : "sem dia com retorno mediano positivo."}</p></div>
+    ${hoursHTML(a)}
+    <h3>Simulador</h3>
+    <div class="sim"><label for="amt" class="muted">Se eu investir US$</label><input id="amt" inputmode="decimal" value="${esc(keep)}"><span id="simout" class="mono"></span></div>
+    <h3>Notícias e X</h3>${newsHTML(a)}
+    <p class="muted" style="font-size:12px">Análise recalculada há ${ago(a.analysisAt)}.</p>
+    <details><summary>Como funciona</summary><p>O servidor guarda 15 medidas do histórico e procura os dias mais parecidos. Os botões 1 semana, 1 mês e 5 meses mudam só o prazo olhado nesses casos parecidos. Quanto maior o prazo, menos janelas independentes existem no histórico e menos o acerto pode ser comprovado.</p></details>`;
+  const upd = () => {
+    const v = parseFloat(String($("#amt").value).replace(",", ".")) || 0;
+    $("#simout").innerHTML = `esperado <b class="${cls(st.med)}">${pct(st.med)}</b> → US$ ${nf(v * (1 + st.med), 2, 2)}`;
+  };
+  if (openDet) el.querySelector("details").open = true;
+  $("#amt").addEventListener("input", upd); upd(); drawChart(a);
+}
+function drawChart(a) {
+  const an0 = anOf(a), cv = $("#chart"); if (!cv || !an0 || !a.candles.length) return;
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  const cs = getComputedStyle(document.documentElement), C = n => cs.getPropertyValue(n).trim();
+  const H = an0.H, cand = a.candles.slice(-Math.max(40, Math.round(H * 1.5))).map(c => ({ ...c })), N = cand.length, P = a.price, days = an0.st.days;
+  const L = cand[N - 1]; L.c = P; L.h = Math.max(L.h, P); L.l = Math.min(L.l, P);
+  const hi = Math.max(...cand.map(c => c.h), ...days.map(d => P * (1 + d.p90)));
+  const lo = Math.min(...cand.map(c => c.l), ...days.map(d => P * (1 + d.p10)));
+  const padR = 62, padT = 10, padB = 10, slots = N + H;
+  const X = i => (i + .5) * (w - padR) / slots, Y = v => padT + (hi - v) / (hi - lo) * (h - padT - padB);
+  g.font = "11px " + C("--mono"); g.textBaseline = "middle"; g.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) {
+    const v = lo + (hi - lo) * k / 4, y = Y(v);
+    g.strokeStyle = C("--line"); g.beginPath(); g.moveTo(0, y); g.lineTo(w - padR, y); g.stroke();
+    g.fillStyle = C("--muted"); g.fillText(nf(v, v >= 100 ? 0 : 2, v >= 100 ? 0 : 4), w - padR + 6, y);
+  }
+  const x0 = X(N - 1);
+  g.beginPath(); g.fillStyle = C("--cone"); g.moveTo(x0, Y(P));
+  days.forEach((d, i) => g.lineTo(X(N + i), Y(P * (1 + d.p90))));
+  for (let i = H - 1; i >= 0; i--) g.lineTo(X(N + i), Y(P * (1 + days[i].p10)));
+  g.closePath(); g.fill();
+  g.strokeStyle = C("--accent"); g.lineWidth = 2; g.beginPath(); g.moveTo(x0, Y(P));
+  days.forEach((d, i) => g.lineTo(X(N + i), Y(P * (1 + d.p50)))); g.stroke();
+  const bw = Math.max(2, (w - padR) / slots * .6);
+  cand.forEach((c, i) => {
+    const x = X(i), col = c.c >= c.o ? C("--up") : C("--down");
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x, Y(c.h)); g.lineTo(x, Y(c.l)); g.stroke();
+    const y1 = Y(Math.max(c.o, c.c)), y2 = Y(Math.min(c.o, c.c)); g.fillRect(x - bw / 2, y1, bw, Math.max(1, y2 - y1));
+  });
+  const ex = an0.exitDay;
+  if (ex) {
+    const x = X(N + ex - 1), y = Y(P * (1 + days[ex - 1].p50));
+    g.fillStyle = C("--accent"); g.beginPath(); g.arc(x, y, 4.5, 0, 7); g.fill();
+    g.fillStyle = C("--fg"); g.textAlign = "right"; g.fillText("saída", x - 8, y - 12); g.textAlign = "left";
+  }
+  g.setLineDash([4, 4]); g.strokeStyle = C("--muted"); g.beginPath(); g.moveTo(0, Y(P)); g.lineTo(w - padR, Y(P)); g.stroke(); g.setLineDash([]);
+  g.fillStyle = C("--fg"); g.fillText(nf(P, P >= 100 ? 2 : 4, P >= 100 ? 2 : 4), w - padR + 6, Y(P) - 10);
+}
+function render() { renderList(); if (selected) renderDetail(selected); else $("#detail").innerHTML = `<div class="empty">Escolha um ativo na lista.</div>`; }
+function pickFirst() { const f = [...assets.values()].find(a => a.kind === (tab === "crypto" ? "crypto" : "stock") && anOf(a)); if (f) selected = f; }
+$("#list").addEventListener("click", e => {
+  const b = e.target.closest(".row"); if (!b) return;
+  selected = assets.get(b.dataset.id); renderList(); renderDetail(selected);
+  if (matchMedia("(max-width:900px)").matches) $("#detail").scrollIntoView({ behavior:"smooth", block:"start" });
+});
+function setTab(t) {
+  tab = t; selected = null;
+  $("#tab-crypto").setAttribute("aria-selected", t === "crypto"); $("#tab-stocks").setAttribute("aria-selected", t === "stocks");
+  pickFirst(); render();
+}
+$("#tab-crypto").onclick = () => setTab("crypto"); $("#tab-stocks").onclick = () => setTab("stocks");
+$("#hzbar").addEventListener("click", e => {
+  const b = e.target.closest("[data-hz]"); if (!b) return;
+  hz = b.dataset.hz;
+  document.querySelectorAll("#hzbar [data-hz]").forEach(x => x.setAttribute("aria-selected", x === b));
+  render();
+});
+$("#notif").onclick = async () => {
+  if (!("Notification" in window)) { toast("Este navegador não suporta notificações."); return; }
+  const r = await Notification.requestPermission(); toast(r === "granted" ? "Alertas ativados." : "Alertas não permitidos.");
+};
+window.addEventListener("resize", () => selected && drawChart(selected));
+matchMedia("(prefers-color-scheme:light)").addEventListener("change", () => selected && drawChart(selected));
+setInterval(() => selected && anOf(selected) && renderDetail(selected), 60000);
+renderList(); connect();
+</script>
+</body>
+</html>

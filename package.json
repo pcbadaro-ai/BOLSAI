@@ -1,0 +1,11 @@
+{
+  "name": "sinal-semanal",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "mock": "MOCK=1 node server.js"
+  },
+  "dependencies": { "ws": "^8.18.0" }
+}

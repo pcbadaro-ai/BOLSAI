@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sinal-semanal
+    runtime: node
+    plan: starter        # o plano grátis dorme após 15 min sem acesso e perderia o monitoramento
+    buildCommand: npm install --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: ACCESS_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: X_BEARER_TOKEN
+        sync: false
+      - key: TWELVEDATA_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
