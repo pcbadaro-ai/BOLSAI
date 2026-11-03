@@ -19,10 +19,11 @@ const GROQ_KEY = ENV.GROQ_API_KEY || ENV.GEMINI_API_KEY || "";
 const AI_EVERY = (+ENV.AI_EVERY_MIN || 30) * 60000;
 const AI_CONC = 1;
 
-// Carrega o universo original completo do projeto
-const universe = require("./lib/universe");
-const BR = universe.BR || [];
-const termsFor = universe.termsFor || (n => [n]);
+let universe = {};
+try { universe = require("./lib/universe"); } catch (e) { console.log("Aviso universe:", e.message); }
+
+const BR = Array.isArray(universe.BR) ? universe.BR : [];
+const termsFor = typeof universe.termsFor === "function" ? universe.termsFor : (n => [n]);
 
 const CRYPTO = [
   ["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["SOL", "Solana"], ["BNB", "BNB"],
@@ -42,7 +43,6 @@ const assets = new Map();
 for (const [s, n] of CRYPTO) assets.set(s, { kind:"crypto", mkt:"CRYPTO", ccy:"USD", sym:s, name:n, pair:s + "USDT", H:7, ysyms:[s + "-USD"] });
 for (const [s, n] of STOCKS) assets.set(s, { kind:"stock", mkt:"US", ccy:"USD", sym:s, name:n, H:5, ysyms:[s], terms:[s, n] });
 
-// Carrega todas as ações brasileiras do universe.js original
 for (const b of BR) {
   if (b && b.sym) {
     assets.set(b.sym, { 
@@ -57,7 +57,6 @@ for (const b of BR) {
     });
   }
 }
-|| [b.sym], terms:b.terms || termsFor(b.name || "") });
 
 const clients = new Set();
 const diag = { started: Date.now(), crypto: { ok:false, err:null }, stocks: { okN:0, fails:0, err:null, sym:null }, macro: { selic:null, usdbrl:null } };
