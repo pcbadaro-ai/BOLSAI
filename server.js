@@ -19,13 +19,11 @@ const GROQ_KEY = ENV.GROQ_API_KEY || ENV.GEMINI_API_KEY || "";
 const AI_EVERY = (+ENV.AI_EVERY_MIN || 30) * 60000;
 const AI_CONC = 1;
 
-// --- COLE AQUI (Substitui a forma antiga de carregar o universe) ---
 let universe = {};
 try { universe = require("./lib/universe"); } catch (e) { console.log("Aviso universe:", e.message); }
 
 const BR = Array.isArray(universe) ? universe : (universe.BR || universe.acoesBR || universe.BRA || []);
 const termsFor = typeof universe.termsFor === "function" ? universe.termsFor : (n => [n]);
-// -----------------------------------------------------------------
 
 const CRYPTO = [
   ["BTC", "Bitcoin"], ["ETH", "Ethereum"], ["SOL", "Solana"], ["BNB", "BNB"],
@@ -64,8 +62,7 @@ const clients = new Set();
 const diag = { started: Date.now(), crypto: { ok:false, err:null }, stocks: { okN:0, fails:0, err:null, sym:null }, macro: { selic:null, usdbrl:null } };
 let aiLastError = null;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-/* ---------- Worker de Análise Estatística ---------- *
+/* ---------- Worker de Análise Estatística ---------- */
 const worker = new Worker(path.join(__dirname, "worker.js"));
 const pending = new Map();
 let wid = 0;
@@ -134,8 +131,7 @@ function parseAI(raw) {
   }
 }
 function validateAI(ai, ctx) { return ai; }
-
-const aiQueue = []; let aiActive = 0;
+  const aiQueue = []; let aiActive = 0;
 function queueAI(a, urgent) {
   if (!GROQ_KEY || !a.analysis || a.aiRunning || aiQueue.includes(a)) return;
   urgent ? aiQueue.unshift(a) : aiQueue.push(a);
@@ -162,14 +158,6 @@ async function aiLoop() {
   }
 }
 
-function completedSeries(a) {
-  const c = a.candles; if (!c || c.length < 400) return null;
-  const lastT = c.at(-1).t, today0 = Math.floor(Date.now() / 86400000) * 86400000;
-  const closed = lastT < today0 ? c : c.slice(0, -1);
-  const out = closed.map(x => x.c);
-  return out.every(Number.isFinite) ? out : null;
-}
-
 function view(a) {
   return {
     sym: a.sym, name: a.name, kind: a.kind, mkt: a.mkt, ccy: a.ccy,
@@ -184,7 +172,6 @@ function broadcast(msg) {
   for (const c of clients) if (c.readyState === WebSocket.OPEN) c.send(data);
 }
 function log(tag, ...args) { console.log(`[${new Date().toISOString().slice(11, 19)}] [${tag}]`, ...args); }
-
 /* ---------- Servidor HTTP e WebSocket ---------- */
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://" + (req.headers.host || "localhost"));
